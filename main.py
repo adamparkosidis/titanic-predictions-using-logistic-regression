@@ -133,6 +133,13 @@ train['Numeric_Tickets'] = train['Ticket'].apply(lambda x: True if x[0].isnumeri
 
 print(pd.pivot_table(train, index = 'Survived', columns = 'Numeric_Tickets', values = 'Ticket' ,aggfunc ='count'))
 sns.countplot(data=train, x='Survived',hue = 'Numeric_Tickets') 
+plt.show()
+
+'''
+It does not seem to be any difference between tickets where the first character is a number or not, but we can can explore if there is 
+something interesting depending on the number or letter
+'''
+
 
 # Maybe the first letter/number of the Ticket can give us some info
 
@@ -155,11 +162,30 @@ plt.figure(figsize=(20,16))
 sns.countplot(data=numeric, x='Survived',hue = 'Ticket_first_char',palette='colorblind') 
 plt.show()
 
+'''
+We can clearly see some patterns here eg people where the first number on their ticket was 1 where more likely to survive
+than people where the first number on their ticket was 3. Maybe the first number indicates the position of the passenger on the ship etc.
+'''
+
 letter = train[train['Ticket'].apply(lambda x: x[0].isnumeric())== False]
 print(pd.pivot_table(letter, index = 'Survived', columns = 'Ticket_first_char', values = 'Ticket' ,aggfunc ='count'))
 plt.figure(figsize=(20,16))
 sns.countplot(data=letter, x='Survived',hue = 'Ticket_first_char',palette='colorblind') 
 plt.show()
+
+'''
+We can clearly see some patterns here eg people where the first letter on their ticket was P where more likely to survive
+than people where the first letter on their ticket was A. It is also interesting to notice that most people where the first 
+letter on their ticket was P had also number 1 as the first number on the numerical part of the ticket name. On the other hand
+most people where the first  letter on their ticket was A had not  number 1 as the first number on the numerical part of the ticket name.
+Maybe the letter is associated just with a cabin, while the first number still indicates the position of the passenger on the ship, thus we gonna
+use this numbers to our model.
+'''
+
+train['Ticket_first_char'] = train['Ticket'].apply(lambda x: x[0] if x[0].isnumeric() else x.split()[-1][0])
+
+# four passengers did not paid a fare and their ticket says 'LINE'
+train['Ticket_first_char'] = train['Ticket_first_char'].apply(lambda x: 1 if x=='L' else x) 
 
 
 ######################
@@ -196,10 +222,16 @@ plt.show()
 
 # We miss some data associated with the Embarked place of some passengers, we will try to impute that missing data based on a reasonable guess 
 
-train[train['Embarked'].isnull()]
-train[(train['Pclass']==1) & (train['Sex']=='female') & (train['Survived']==1)]['Embarked'].value_counts()
-# Based on the Pclass and the Embarked place we impute 'Fare' with reasonable guesses
-train['Embarked'].iloc[61] = 'C'  # Initially we marked the Ebarked place as 'S', but given that 'C' is also very probable and that the model perform slighlty better we end u[ with 'C'
+train[train['Embarked'].isnull()]  # both of them were in the 1st class and their Fare prices were both 80
+
+#Then, show the table of median Fare values sliced by Pclass and Embarked again:
+
+train.groupby([train['Pclass'],train['Embarked']]).median()
+
+# Based on the result, the median Fare price of passengers Embarked on C and were in the 1st class is 76.7, which is quite similar to 80
+# Therefore, it’s safe to fill in the missing value of Embarked information as “C” as below.
+
+train['Embarked'].iloc[61] = 'C'  
 train['Embarked'].iloc[829] = 'C'
 
 # We decide to drop the Cabin column due to the fact that we miss the biggest part of the data 
@@ -213,7 +245,10 @@ train["Salutation"] = train["Salutation"].apply(lambda x: x[1])
 print(train["Salutation"].value_counts())
 train["Salutation"].hist(figsize=(20,7),bins=50)  
 
-train=train[train["Salutation"].apply(lambda x: x in [' Col', ' Dr', ' Major',' Master', ' Miss',  ' Mr', ' Mrs', ' Ms', ' Rev'])]
+# We categorize the salutations
+
+train["Salutation"] = train["Salutation"].apply(lambda x: ' Miss' if x in [' Ms', ' Lady', ' Mlle', ' Mme'] else x)
+train["Salutation"] = train["Salutation"].apply(lambda x: ' Other' if x in [' Col', ' Major', ' Don', ' Capt', ' Jonkheer', ' Sir', ' the Countess'] else x)
 print(np.unique(train["Salutation"], return_counts=True))
 
 print(pd.pivot_table(train, index = 'Survived', columns = 'Salutation', values = 'Ticket' ,aggfunc ='count'))
