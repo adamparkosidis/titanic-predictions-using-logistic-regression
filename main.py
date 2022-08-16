@@ -177,15 +177,15 @@ plt.show()
 We can clearly see some patterns here eg people where the first letter on their ticket was P where more likely to survive
 than people where the first letter on their ticket was A. It is also interesting to notice that most people where the first 
 letter on their ticket was P had also number 1 as the first number on the numerical part of the ticket name. On the other hand
-most people where the first  letter on their ticket was A had not  number 1 as the first number on the numerical part of the ticket name.
+most people where the first letter on their ticket was A had not  number 1 as the first number on the numerical part of the ticket name.
 Maybe the letter is associated just with a cabin, while the first number still indicates the position of the passenger on the ship, thus we gonna
 use this numbers to our model.
 '''
 
 train['Ticket_first_char'] = train['Ticket'].apply(lambda x: x[0] if x[0].isnumeric() else x.split()[-1][0])
 
-# four passengers did not paid a fare and their ticket says 'LINE'
-train['Ticket_first_char'] = train['Ticket_first_char'].apply(lambda x: 1 if x=='L' else x) 
+# four passengers did not paid a fare and their ticket says 'LINE', we decide to give them 0
+train['Ticket_first_char'] = train['Ticket_first_char'].apply(lambda x: '0' if x=='L' else x) 
 
 
 ######################
@@ -216,8 +216,9 @@ def impute_age(cols):
     else:
         return Age
 
-train['Age'] = train[['Age','Pclass']].apply(impute_age, axis=1)
-sns.heatmap(train.isnull(), yticklabels=False, cbar= False, cmap='viridis') # filled 'Age' column with reasonable guesses
+train['Age'] = train[['Age','Pclass']].apply(impute_age, axis=1) # filled 'Age' column with reasonable guesses
+plt.figure(figsize=(20,16))
+sns.heatmap(train.isnull(), yticklabels=False, cbar= False, cmap='viridis') 
 plt.show()
 
 # We miss some data associated with the Embarked place of some passengers, we will try to impute that missing data based on a reasonable guess 
@@ -231,8 +232,8 @@ train.groupby([train['Pclass'],train['Embarked']]).median()
 # Based on the result, the median Fare price of passengers Embarked on C and were in the 1st class is 76.7, which is quite similar to 80
 # Therefore, it’s safe to fill in the missing value of Embarked information as “C” as below.
 
-train['Embarked'].iloc[61] = 'C'  
-train['Embarked'].iloc[829] = 'C'
+train.loc[61, 'Embarked'] = 'C'
+train.loc[829, 'Embarked'] = 'C'
 
 # We decide to drop the Cabin column due to the fact that we miss the biggest part of the data 
 train.drop('Cabin', axis=1, inplace=True)
@@ -245,11 +246,7 @@ train["Salutation"] = train["Salutation"].apply(lambda x: x[1])
 print(train["Salutation"].value_counts())
 train["Salutation"].hist(figsize=(20,7),bins=50)  
 
-# We categorize the salutations
-
-train["Salutation"] = train["Salutation"].apply(lambda x: ' Miss' if x in [' Ms', ' Lady', ' Mlle', ' Mme'] else x)
-train["Salutation"] = train["Salutation"].apply(lambda x: ' Other' if x in [' Col', ' Major', ' Don', ' Capt', ' Jonkheer', ' Sir', ' the Countess'] else x)
-print(np.unique(train["Salutation"], return_counts=True))
+# Let's see the survival rate based on the salutation of each passenger
 
 print(pd.pivot_table(train, index = 'Survived', columns = 'Salutation', values = 'Ticket' ,aggfunc ='count'))
 plt.figure(figsize=(20,16))
@@ -265,14 +262,14 @@ We can clearly see some patterns here eg more people with the 'Mrs' and 'Miss' p
 sex=pd.get_dummies(train['Sex'],drop_first=True)
 embark=pd.get_dummies(train['Embarked'],drop_first=True)
 salutation = pd.get_dummies(train['Salutation'],drop_first=True)
+ticket_first_char=pd.get_dummies(train['Ticket_first_char'],drop_first=True)
 
-train = pd.concat([train,sex,embark,salutation], axis=1)
+train = pd.concat([train,sex,embark,salutation,ticket_first_char], axis=1)
 train.head()
 
-train.drop(['PassengerId','Name','Sex','Ticket','Numeric_Tickets','Ticket_first_char','Fare','Embarked','Salutation'],axis=1,inplace=True)
+train.drop(['PassengerId','Name','Sex','Ticket','Numeric_Tickets','Ticket_first_char','Embarked','Salutation'],axis=1,inplace=True)
 train.head()
 train.dropna()
-
 
 
 ########################
@@ -305,5 +302,18 @@ print(classification_report(y_test,predictions_2))
 print('Accuracy {:.6f}'.format(accuracy_score(predictions_2, y_test)))
 
 '''
-We see that the logistic regression model ends up with an accuracy around 87.16% outmatching the random forest model
+We see that the logistic regression model ends up with an accuracy around 83.2% outmatching the random forest model.
+
+Some notes: 
+In the case we drop some outliers the logistic regression model performs even better e.g. if we keep only the most common salutations by
+inserting the code 
+
+```
+train=train[train["Salutation"].apply(lambda x: x in [' Col', ' Dr', ' Major',' Master', ' Miss',  ' Mr', ' Mrs', ' Ms', ' Rev'])]
+```
+
+between lines 247-251, the LR model's accuracy becomes 85.2% . Furthermore, if we also do not use the first number of the ticket 
+```train['Ticket_first_char'] ```  the accuracy increases to 86.4%. In that case, if we also do not use the ```train['Fare'] ``` the accuracy
+further increases to 87.16%.
+
 '''
