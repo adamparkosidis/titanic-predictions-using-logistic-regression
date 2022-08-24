@@ -1,5 +1,7 @@
 # Titanic - Machine Learning from Disaster
 
+## Introduction
+
 This project is the 'Hello World' of ML and one of the most famous Kaggle competitions.
 
 [Link to Kaggle website where there is an overview of the project and of the data](https://www.kaggle.com/competitions/titanic/overview)
@@ -33,3 +35,12 @@ Cabin: Cabin number
 
 Embarked: Port of Embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)
 
+## Code Overview
+
+1. We read the data and perform extented exploratory data analysis
+
+2. We perform feature engineering in order the replace missing data and create new useful variables 
+
+3. We create different models in order to predict if a passenger survived the shipwreck or not
+
+4. We compare the different models and comment on their performance
